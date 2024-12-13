@@ -1,16 +1,18 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { register } from "@/lib/firebase";
+import { register, registerUserWithGoogle } from "@/lib/firebase";
+import Image from 'next/image';
 
 export default function Home() {
   const [showContent, setShowContent] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const registerButton = useRef(null);
+  const signupWithGoogleRef = useRef(null);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
   const confirmPassRef = useRef(null);
 
-  const handleRegisterClick = (e) => {
+  const handleRegisterClick = async(e) => {
     e.preventDefault();
     setErrorMessage("");
 
@@ -20,13 +22,27 @@ export default function Home() {
       confirmPassRef.current.value === ""
     ) {
       setErrorMessage("Passwords do not match or are empty.");
-      setShowContent(false); // Hide content in case of error
+      setShowContent(false);
     } else {
       setShowContent((prevState) => !prevState);
-      console.log("Email:", emailRef.current.value);
-      console.log("Password:", passwordRef.current.value);
-      register(emailRef.current.value, passwordRef.current.value);
+      
+      try {
+        const user = await register(emailRef.current.value, passwordRef.current.value);
+        console.log('Registered successfully:', user);
+      } catch (errorCode) {
+        if (errorCode === 'auth/email-already-in-use') {
+          setErrorMessage("Email already exists.");
+        } else {
+          setErrorMessage("An unexpected error occurred.");
+        }
+        setShowContent(false);
+      }    
     }
+  }
+
+  const handleSignupWithGoogleClick = (e) => {
+    e.preventDefault();
+    registerUserWithGoogle();
   }
 
   return (
@@ -58,10 +74,15 @@ export default function Home() {
               <input ref={confirmPassRef} type="password" name="confirmPass" id="confirmPass" placeholder="CONFIRM PASSWORD" className="h-[50px] rounded-b-[5px]" />
             </div>
             {errorMessage && (
-              <div className="text-red-500 mt-4">{errorMessage}</div>
+              <div className="text-red-500">{errorMessage}</div>
             )}
 
             <button ref={registerButton} type="submit" className="h-[40px] bg-white" onClick={handleRegisterClick}>Sign up</button>
+            <button ref={signupWithGoogleRef} className="flex justify-between box-border items-center rounded-[5px] bg-[white] p-[10px]" onClick={handleSignupWithGoogleClick}>
+              Sign up with Google
+              <Image src="/google-icon.jpg" alt="Google Icon" width={30} height={30} className="rounded-r-[5px]"/>
+            </button>
+            <div className="text-[white]">Have an account? <a href="/" className="text-[lightPink]"> Log in now</a></div>
           </div>
         </form>
       </div>
