@@ -2,8 +2,10 @@
 import React, { useState, useRef } from "react";
 import { register, registerUserWithGoogle } from "@/lib/firebase";
 import Image from 'next/image';
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
   const [showContent, setShowContent] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const registerButton = useRef(null);
@@ -24,12 +26,13 @@ export default function Home() {
       setErrorMessage("Passwords do not match or are empty.");
       setShowContent(false);
     } else {
-      setShowContent((prevState) => !prevState);
-      
       try {
         const user = await register(emailRef.current.value, passwordRef.current.value);
-        console.log('Registered successfully:', user);
+
+        console.log('Registered successfully');
+        router.push('/dashboard');
       } catch (errorCode) {
+        setShowContent((prevState) => !prevState);
         if (errorCode === 'auth/email-already-in-use') {
           setErrorMessage("Email already exists.");
         } else {
@@ -40,9 +43,19 @@ export default function Home() {
     }
   }
 
-  const handleSignupWithGoogleClick = (e) => {
+  const handleSignupWithGoogleClick = async (e) => {
+    console.log
+
     e.preventDefault();
-    registerUserWithGoogle();
+    try {
+      await registerUserWithGoogle(router); // Await the login function
+      console.log("Login successful!");
+    } catch (error) {
+      if (error.message === 'User already exists in the database.') {
+        setErrorMessage("Email already exists.");
+        setShowContent(false);
+      }
+    }
   }
 
   return (

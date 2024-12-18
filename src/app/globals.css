@@ -2,3 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
+.sportTitle {
+  @apply text-sport-blue text-[16px];
+}

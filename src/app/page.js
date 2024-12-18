@@ -1,8 +1,11 @@
 "use client";
-import Link from "next/link";
 import Image from 'next/image';
 import React, { useState, useRef } from "react";
 import { login, loginWithGoogle } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
+
+import { checkCurrentUser, signOutUser } from "@/lib/firebase";
+
 
 export default function Home() {
   const [showContent, setShowContent] = useState(false);
@@ -12,6 +15,7 @@ export default function Home() {
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
   const rememberMeRef = useRef(null);
+  const router = useRouter();
 
   const handleLoginClick = async (e) => {
     e.preventDefault();
@@ -19,6 +23,7 @@ export default function Home() {
 
     try {
       const user = await login(emailRef.current.value, passwordRef.current.value);
+      router.push('/dashboard');
     } catch (errorCode) {
       setShowContent((prevState) => !prevState);
       console.log(errorCode)
@@ -37,7 +42,7 @@ export default function Home() {
 
   const handleLoginWithGoogleClick = (e) => {
     e.preventDefault();
-    loginWithGoogle();
+    loginWithGoogle(router)
   }
 
   return (
