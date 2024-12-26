@@ -5,3 +5,19 @@
 .sportTitle {
   @apply text-sport-blue text-[16px];
 }
+
+html, body, main {
+  width: 100%;
+  min-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Add this to your global CSS file or the relevant style file */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, and Opera */
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+}
