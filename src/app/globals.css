@@ -9,7 +9,7 @@
 html, body, main {
   width: 100%;
   min-width: 100vw;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* Add this to your global CSS file or the relevant style file */
