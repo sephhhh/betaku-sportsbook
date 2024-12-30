@@ -170,21 +170,3 @@ function formatToEST(datetimeString) {
   return `${formattedTime} EST`;
 }
 
-function MyComponent(market, outcome) {
-  if (market.key === "h2h") {
-    return <div>{convertDecimalToAmerican(outcome.price)}</div>;
-  } else if (market.key === "spreads") {
-    return (
-      <div>
-        <div>{outcome.point}</div>
-        <div>{convertDecimalToAmerican(outcome.price)}</div>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <div>{outcome.name.charAt(0)} {outcome.point}</div>
-      <div>{convertDecimalToAmerican(outcome.price)}</div>
-    </div>
-  );
-}

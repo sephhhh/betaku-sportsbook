@@ -7,17 +7,22 @@ import { checkCurrentUser, signOutUser } from "@/lib/firebase";
 import { convertDecimalToAmerican, createGame } from "./oddsApi";
 import gameData from "../../../game.json";
 
-function createItem(game, market, outcome) {
+function createItem(game, market, outcome, key, betItemRef, removeBet) {
   const homeTeam = game.homeTeam;
   const awayTeam = game.awayTeam;
   const odds = convertDecimalToAmerican(outcome.price)
   const type = market.key;
   const commence_time = formatToEST(game.commenceTime);
 
+  const handleRemoveBet = (e) => {
+    e.preventDefault();
+    removeBet(key);
+  }
+
   if (type === 'h2h') {
     return (
-      <div className="grid grid-cols-[17px_1fr] gap-[15px] pt-[20px] pb-[20px] border-b border-solid border-[#c8c8c8]">
-        <button className="flex items-start pt-[6px] h-[17px] w-auto">
+      <div ref={betItemRef} className="grid grid-cols-[17px_1fr] gap-[15px] pt-[20px] pb-[20px] border-b border-solid border-[#c8c8c8]">
+        <button className="flex items-start pt-[6px] h-[17px] w-auto" onClick={handleRemoveBet}>
             <img src="delete.png" alt="Delete" className="h-[17px] w-auto"/>
         </button>
         <div className="flex flex-col w-[100%] box-border">
@@ -39,20 +44,23 @@ function createItem(game, market, outcome) {
   return type;
 }
 
-function createGameFromJson(setBetItems, betItems, setCount, count) {
+function createGameFromJson(setBetItems, betItems, setCount, increment, decrement) {
   const [games, setGames] = useState([]);
   const betButton = useRef(null);
+  const betItemRef = useRef(null);
+
+  const removeBet = (key) => {
+    setBetItems((prevBetItems) => prevBetItems.filter((bet) => bet.key !== key));
+    decrement();
+  };
 
   const handleBetButton = (game, market, outcome) => (e) => {
     e.preventDefault();
-    const item = createItem(game, market, outcome);
+    const itemKey = `${game.id}-${market.key}-${outcome.id}`;
+    const item = createItem(game, market, outcome, itemKey, betItemRef, removeBet);
 
-    const marketDiv = document.createElement('div');
-    const gameDiv = document.createElement('div');
-    marketDiv.textContent = JSON.stringify(market);
-    gameDiv.textContent = JSON.stringify(game.commenceTime);
-    setBetItems([...betItems, <div key={betItems.length}>{createItem(game, market, outcome)}</div>]);
-    setCount(count + 1)
+    setBetItems([...betItems, <div key={itemKey}>{item}</div>]);
+    increment();
   }
 
   useEffect(() => {
@@ -204,6 +212,14 @@ export default function Home() {
   const [count, setCount] = useState(0);
   const [betItems, setBetItems] = useState([]);
 
+  const increment = () => {
+    setCount((prevCount) => prevCount + 1);
+  };
+
+  const decrement = () => {
+    setCount((prevCount) => prevCount - 1);
+  };
+
   const handleSignoutClick = (e) => {
     e.preventDefault();
     signOutUser();
@@ -229,7 +245,7 @@ export default function Home() {
           </div>
           <hr></hr>
           <div className="overflow-auto min-h-[500px] max-h-[740px] pl-[20px] pr-[20px] pt-[10px] pb-[10px] hide-scrollbar">
-            {createGameFromJson(setBetItems, betItems, setCount, count)}
+            {createGameFromJson(setBetItems, betItems, setCount, increment, decrement)}
           </div>
         </div>
       </div>
