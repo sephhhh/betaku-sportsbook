@@ -44,22 +44,38 @@ function createItem(game, market, outcome, key, betItemRef, removeBet) {
   return type;
 }
 
-function createGameFromJson(setBetItems, betItems, setCount, increment, decrement) {
+function createGameFromJson(setBetItems, betItems, increment, decrement, getBetItems, betObjects, setBetObjects, updateTotalOdds) {
   const [games, setGames] = useState([]);
   const betButton = useRef(null);
   const betItemRef = useRef(null);
 
   const removeBet = (key) => {
+    console.log(betObjects)
     setBetItems((prevBetItems) => prevBetItems.filter((bet) => bet.key !== key));
+    setBetObjects((prevBetObjects) => {
+      const updatedBetObjects = prevBetObjects.filter((bet) => bet.key !== key);
+      updateTotalOdds(updatedBetObjects);
+      return updatedBetObjects;
+    });
     decrement();
   };
 
   const handleBetButton = (game, market, outcome) => (e) => {
     e.preventDefault();
-    const itemKey = `${game.id}-${market.key}-${outcome.id}`;
+    const itemKey = `${game.id}-${market.key}`;
     const item = createItem(game, market, outcome, itemKey, betItemRef, removeBet);
 
-    setBetItems([...betItems, <div key={itemKey}>{item}</div>]);
+    setBetItems((prevBetItems) => {
+      const updatedBetItems = [...prevBetItems, <div key={itemKey}>{item}</div>];
+      return updatedBetItems;
+    });
+
+    const newBetObject = { game, market, outcome, key: itemKey };
+    setBetObjects((prevBetObjects) => {
+      const updatedBetObjects = [...prevBetObjects, newBetObject];
+      updateTotalOdds(updatedBetObjects);
+      return updatedBetObjects;
+    });
     increment();
   }
 
@@ -207,10 +223,13 @@ function MyComponent(market, outcome) {
 export default function Home() {
   const router = useRouter();
   const signoutButtonRef = useRef(null);
+  const placeBetButtonRef = useRef(null);
   const betSlipRef = useRef(null);
   const slipCountRef = useRef(null);
   const [count, setCount] = useState(0);
+  const [totalOdds, setTotalOdds] = useState(0);
   const [betItems, setBetItems] = useState([]);
+  const [betObjects, setBetObjects] = useState([]);
 
   const increment = () => {
     setCount((prevCount) => prevCount + 1);
@@ -226,11 +245,44 @@ export default function Home() {
     router.push('/');
   }
 
+  const getBetItems = () => {
+    console.log(betItems);
+  }
+
+  const updateTotalOdds = (updatedBetObj) => {
+    if (updatedBetObj.length === 0) {
+      setTotalOdds(0);
+      return;
+    }
+    let totalDecimalOdds = 1;
+    for (const bet in updatedBetObj) {
+      totalDecimalOdds *= updatedBetObj[bet].outcome.price;
+    }
+    const roundedTotalDecimalOdds = Number(totalDecimalOdds.toFixed(2));
+    const totalAmericanOdds = convertDecimalToAmerican(roundedTotalDecimalOdds);
+    setTotalOdds(totalAmericanOdds);
+  }
+
+  const handlePlaceBet = (e) => {
+    e.preventDefault();
+    alert('hi');
+  }
+
   return (
     <main className="flex w-screen pl-[40px] gap-[35px] bg-[#f1f3f7]">
       <div className="flex flex-grow flex-col mt-[10px] gap-[20px]">
-        <div className="flex h-[45px] items-center pl-[20px] gap-[30px] shadow-[rgba(50,50,93,0.25)_0px_2px_5px_-1px,rgba(0,0,0,0.3)_0px_1px_3px_-1px] bg-[#fff]">
-          <button className="sportTitle">NFL</button><button className="sportTitle">NBA</button><button className="sportTitle">MLB</button><button className="sportTitle">NHL</button>
+        <div className="flex justify-between items-center pl-[20px] pr-[20px] shadow-[rgba(50,50,93,0.25)_0px_2px_5px_-1px,rgba(0,0,0,0.3)_0px_1px_3px_-1px] bg-[#fff]">
+          <div className="flex h-[45px] items-center gap-[30px]">
+            <button className="sportTitle">NFL</button><button className="sportTitle">NBA</button><button className="sportTitle">MLB</button><button className="sportTitle">NHL</button>
+          </div>
+
+          <button
+          ref={signoutButtonRef}
+          className="h-[25px] bg-white"
+          aria-label="Sign out"
+          onClick={handleSignoutClick}
+        > Sign out
+        </button>
         </div>
         <div className="rounded-[5px] shadow-[rgba(99,99,99,0.2)_0px_2px_8px_0px] bg-[#fff]">
           <div className="pl-[20px] pr-[20px] pt-[10px] pb-[10px] text-[20px] font-semibold">NFL Odds</div>
@@ -245,47 +297,55 @@ export default function Home() {
           </div>
           <hr></hr>
           <div className="overflow-auto min-h-[500px] max-h-[740px] pl-[20px] pr-[20px] pt-[10px] pb-[10px] hide-scrollbar">
-            {createGameFromJson(setBetItems, betItems, setCount, increment, decrement)}
+            {createGameFromJson(setBetItems, betItems, increment, decrement, getBetItems, betObjects, setBetObjects, updateTotalOdds)}
           </div>
         </div>
       </div>
 
       <div className="flex flex-col min-w-[425px] w-[475px] h-[912px] shadow-[rgba(0,0,0,0.24)_0px_3px_8px]">
-        <div className="flex items-center border-b-2 border-b-solid border-b-[#c8c8c8] p-[15px] bg-[#fff] mb-[15px]">
-          <div ref={slipCountRef} className="w-[30px] h-[30px] bg-blue-500 text-white flex items-center justify-center rounded-full">{count}</div>
-          <p className="flex align-center font-semibold">Betslip</p>
+        <div className="flex justify-between border-b-2 border-b-solid border-b-[#c8c8c8] p-[15px] bg-[#fff] mb-[15px]">
+          <div className="flex items-center">  
+            <div ref={slipCountRef} className="w-[30px] h-[30px] bg-blue-500 text-white flex items-center justify-center rounded-full">{count}</div>
+            <p className="flex align-center font-semibold">Betslip</p>
+          </div>
+          <div className="flex items-center">
+            Balance
+          </div>
         </div>
-        <div ref={betSlipRef} className="overflow-auto h-[650px] border-t-2 border-b border-solid border-[#c8c8c8] pl-[20px] pr-[20px] bg-[#fff]">
+
+        <div ref={betSlipRef} className="overflow-auto h-[625px] border-t-2 border-b border-solid border-[#c8c8c8] pl-[20px] pr-[20px] bg-[#fff]">
           {betItems}
         </div>
-        <div className="flex justify-between bg-[#fff] p-[15px] border-b-2 border-solid border-[#c8c8c8]">
-          <div className="flex flex-col justify-center border border-solid border-[#788490] rounded-[5px] w-[200px] h-[70px] pl-[10px] ">
-            <label htmlFor="wager" className="text-[14px]">WAGER</label>
-            <div className="flex items-center gap-[3px]">
-              <div className="text-[20px]">$</div>
-              <input type="text" id="wager" name="wager" className="text-[20px] w-[150px] h-[20px] focus:outline-none"/>
-            </div>
+        <div className="bg-[#fff] p-[15px] border-b-2 border-solid border-[#c8c8c8]">
+          <div className="text-[20px] font-medium">
+            {totalOdds}
           </div>
-    
-          <img src="./fist.png" alt="fist" className="h-[70px] w-auto"/>
+          <div className="flex justify-between">
+            <div className="flex flex-col justify-center border border-solid border-[#788490] rounded-[5px] w-[200px] h-[70px] pl-[10px] ">
+              <label htmlFor="wager" className="text-[14px]">WAGER</label>
+              <div className="flex items-center gap-[3px]">
+                <div className="text-[20px]">$</div>
+                <input type="text" id="wager" name="wager" className="text-[20px] w-[150px] h-[20px] focus:outline-none"/>
+              </div>
+            </div>
+      
+            <img src="./fist.png" alt="fist" className="h-[70px] w-auto"/>
 
-          <div className="flex flex-col justify-center border border-solid border-[#788490] rounded-[5px] w-[200px] h-[70px] pl-[10px]">
-            <label htmlFor="toWin" className="text-[14px]">TO WIN</label>
-            <div className="flex items-center">
-              <div>$</div>
-              <input type="text" id="toWin" name="toWin" className="w-[150px] h-[18px] focus:outline-none"/>
+            <div className="flex flex-col justify-center border border-solid border-[#788490] rounded-[5px] w-[200px] h-[70px] pl-[10px]">
+              <label htmlFor="toWin" className="text-[14px]">TO WIN</label>
+              <div className="flex items-center">
+                <div>$</div>
+                <input type="text" id="toWin" name="toWin" className="w-[150px] h-[18px] focus:outline-none"/>
+              </div>
             </div>
           </div>
         </div>
-      
 
-        <button
-          ref={signoutButtonRef}
-          className="fixed z-50 bottom-4 right-4 h-[40px] bg-white border border-solid border-black rounded-[5px] pl-[10px] pr-[10px] cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-black"
-          aria-label="Sign out"
-          onClick={handleSignoutClick}
-        > Sign out
-        </button>
+        <div className="flex flex-1">
+          <button ref={placeBetButtonRef} className="h-[100%] w-[100%] bg-[#bf1216]" onClick={handlePlaceBet}>
+            <div className="text-[#fff]">just a red button tbh</div>
+          </button>
+        </div>
       </div>
   </main>
   )
