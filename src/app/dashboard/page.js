@@ -44,7 +44,7 @@ function createItem(game, market, outcome, key, betItemRef, removeBet) {
   return type;
 }
 
-function createGameFromJson(setBetItems, betItems, increment, decrement, betObjects, setBetObjects, updateTotalOdds, placeBetButtonRef, userInputRef, buttonContentRef) {
+function createGameFromJson(setBetItems, betItems, increment, decrement, betObjects, setBetObjects, updateTotalOdds, placeBetButtonRef, userInputRef, buttonContentRef, otherButtonContentRef) {
   const [games, setGames] = useState([]);
   const betButton = useRef(null);
   const betItemRef = useRef(null);
@@ -58,6 +58,7 @@ function createGameFromJson(setBetItems, betItems, increment, decrement, betObje
       if (updatedBetObjects.length === 0) {
         placeBetButtonRef.current.className = 'h-[100%] w-[100%] bg-[#bf1216]'
         buttonContentRef.current.className = "visible text-[#fff]";
+        otherButtonContentRef.current.className = "hidden";
       }
       return updatedBetObjects;
     });
@@ -84,6 +85,7 @@ function createGameFromJson(setBetItems, betItems, increment, decrement, betObje
     if (userInputRef.current.value !== '') {
       placeBetButtonRef.current.className = "h-[100%] w-[100%] bg-[#2a8d2f]";
       buttonContentRef.current.className = "hidden";
+      otherButtonContentRef.current.className = "visible flex flex-col text-[#fff]";
     }
   }
 
@@ -231,6 +233,7 @@ export default function Home() {
   const signoutButtonRef = useRef(null);
   const placeBetButtonRef = useRef(null);
   const buttonContentRef = useRef(null);
+  const otherButtonContentRef = useRef(null);
   const betSlipRef = useRef(null);
   const slipCountRef = useRef(null);
   const userInputRef = useRef(null);
@@ -238,6 +241,8 @@ export default function Home() {
   const [count, setCount] = useState(0);
   const [totalDecimalOdds, setTotalDecimalOdds] = useState(0);
   const [totalOdds, setTotalOdds] = useState(0);
+  const [userAmount, setUserAmount] = useState(0);
+  const [profit, setProfit] = useState(0);
   const [betItems, setBetItems] = useState([]);
   const [betObjects, setBetObjects] = useState([]);
 
@@ -282,17 +287,27 @@ export default function Home() {
   }
 
   const handleUserInput = (e) => {
-    console.log(totalDecimalOdds)
-    if (totalDecimalOdds !== 0) {
-      const payOut = e.target.value * totalDecimalOdds;
-      const toWin = payOut - e.target.value;
-      toWinRef.current.value = Number(toWin.toFixed(2));
-      if (betSlipRef.current.childNodes.length !== '') {
-        placeBetButtonRef.current.className = "h-[100%] w-[100%] bg-[#2a8d2f]";
-        buttonContentRef.current.className = "hidden";
-      }
-    } else {
+    if (e.target.value === '') {
+      placeBetButtonRef.current.className = "h-[100%] w-[100%] bg-[#bf1216]";
       buttonContentRef.current.className = "visible text-[#fff]";
+      otherButtonContentRef.current.className = "hidden";
+      toWinRef.current.value = '';
+    } else {
+      if (totalDecimalOdds !== 0) {
+        const payOut = e.target.value * totalDecimalOdds;
+        const toWin = payOut - e.target.value;
+        setUserAmount(e.target.value);
+        setProfit( Number(toWin.toFixed(2)));
+        toWinRef.current.value = Number(toWin.toFixed(2));
+        if (betSlipRef.current.childNodes.length !== '') {
+          placeBetButtonRef.current.className = "h-[100%] w-[100%] bg-[#2a8d2f]";
+          buttonContentRef.current.className = "hidden";
+          otherButtonContentRef.current.className = "visible flex flex-col text-[#fff]";
+        }
+      } else {
+        buttonContentRef.current.className = "visible text-[#fff]";
+        otherButtonContentRef.current.className = "hidden";
+      }
     }
   }
 
@@ -325,7 +340,7 @@ export default function Home() {
           </div>
           <hr></hr>
           <div className="overflow-auto min-h-[500px] max-h-[740px] pl-[20px] pr-[20px] pt-[10px] pb-[10px] hide-scrollbar">
-            {createGameFromJson(setBetItems, betItems, increment, decrement, betObjects, setBetObjects, updateTotalOdds, placeBetButtonRef, userInputRef, buttonContentRef)}
+            {createGameFromJson(setBetItems, betItems, increment, decrement, betObjects, setBetObjects, updateTotalOdds, placeBetButtonRef, userInputRef, buttonContentRef, otherButtonContentRef)}
           </div>
         </div>
       </div>
@@ -372,6 +387,7 @@ export default function Home() {
         <div className="flex flex-1">
           <button ref={placeBetButtonRef} className="h-[100%] w-[100%] bg-[#bf1216]" onClick={handlePlaceBet}>
             <div ref={buttonContentRef} className="text-[#fff]">so are you gonna place a bet or nah??</div>
+            <div ref={otherButtonContentRef} className="hidden"> <span className="text-[23px] font-light">Place ${userAmount} bet</span> <span className="font-light">TO WIN: ${profit}</span></div>
           </button>
         </div>
       </div>
