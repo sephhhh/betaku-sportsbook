@@ -1,12 +1,8 @@
-import { createClient as supabaseClient } from '@supabase/supabase-js';
-import { redirect } from 'next/navigation'
-
+import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export function createClient() {
-  return supabaseClient(supabaseUrl, supabaseKey);
-}
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -22,6 +18,7 @@ export async function GET(request) {
       token_hash,
     })
     if (!error) {
+      console.log(error)
       // redirect user to specified redirect URL or root of app
       redirect(next)
       return
@@ -33,27 +30,32 @@ export async function GET(request) {
 }
 
 export async function register(userEmail, userPassword) {
-  const supabase = await createClient();
-
   const { data, error } = await supabase.auth.signUp({
     email: userEmail,
     password: userPassword,
     options: {
-      emailRedirectTo: 'http://localhost:3000/dashboard',
+      emailRedirectTo: 'http://localhost:3001/dashboard',
     },
   })
+
+  if (error) {
+    throw error.message; // Propagate the error for handling
+  }
+
+  return data; // Return user data on success
 }
 
-export async function signInWithEmail(userEmail, userPassword) {
-  const supabase = await createClient();
-
+export async function login(userEmail, userPassword) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email: userEmail,
     password: userPassword,
   })
 
   if (error) {
-    console.error('Sign-in error:', error);
-    return;
+    return Promise.reject(error.toString());
   }
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut({ scope: 'local' })
 }
