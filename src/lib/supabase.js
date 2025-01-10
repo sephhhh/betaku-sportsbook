@@ -4,6 +4,23 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+export async function loginWithGoogle(router) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `http://localhost:3001/dashboard`,
+    },
+  });
+
+  if (error) {
+    console.error('Error logging in with Google:', error.message);
+    return { error };
+  }
+
+  console.log('User data:', data);
+  return { data };
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
