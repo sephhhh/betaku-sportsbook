@@ -1,25 +1,57 @@
 import { createClient } from '@supabase/supabase-js';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export async function loginWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
+export const addUser = async (email) => {
+  alert('hi')
+  const { data, error } = await supabase
+    .from('users') // The name of your table
+    .insert([
+      {
+        email: email,  // User's email
+      },
+    ]);
+
+  if (error) {
+    console.error("Error adding user:", error);
+    return null;
+  }
+
+  console.log("User added:", email);
+  return data;
+};
+
+
+export async function loginWithGoogle() {  
+  const { user, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `http://localhost:3001/dashboard`,
+      redirectTo: `http://localhost:3000/dashboard`,
     },
   });
 
   if (error) {
-    console.error('Error logging in with Google:', error.message);
-    return { error };
+    console.error('Error signing in:', error);
+    return;
   }
 
-  console.log('User data:', data);
-  return { data };
+  // The user object contains user details such as email
+  console.log('User signed in:', user);
 }
+
+async function getUserEmail() {
+  const user = supabase.auth.user(); // Get the currently authenticated user
+
+  if (user) {
+    return user.email; // Return the email if the user is authenticated
+  } else {
+    throw new Error("User not authenticated"); // If no user is authenticated, throw an error
+  }
+}
+
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -51,7 +83,7 @@ export async function register(userEmail, userPassword) {
     email: userEmail,
     password: userPassword,
     options: {
-      emailRedirectTo: 'http://localhost:3001/dashboard',
+      emailRedirectTo: 'http://localhost:3000/dashboard',
     },
   })
 
@@ -76,3 +108,5 @@ export async function login(userEmail, userPassword) {
 export async function signOut() {
   const { error } = await supabase.auth.signOut({ scope: 'local' })
 }
+
+export default supabase;
