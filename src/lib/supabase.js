@@ -5,26 +5,6 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export const addUser = async (email) => {
-  alert('hi')
-  const { data, error } = await supabase
-    .from('users') // The name of your table
-    .insert([
-      {
-        email: email,  // User's email
-      },
-    ]);
-
-  if (error) {
-    console.error("Error adding user:", error);
-    return null;
-  }
-
-  console.log("User added:", email);
-  return data;
-};
-
-
 export async function loginWithGoogle() {  
   const { user, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
