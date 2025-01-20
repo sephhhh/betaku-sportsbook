@@ -1,13 +1,15 @@
 "use client";
 import Image from 'next/image';
 import React, { useState, useRef } from "react";
-import { login, loginWithGoogle } from "@/lib/firebase";
+import { loginWithGoogle, projectId } from '@/lib/supabase';
+import { login } from '@/lib/supabase';
 import { useRouter } from "next/navigation";
 
 import { checkCurrentUser, signOutUser } from "@/lib/firebase";
 
-
 export default function Home() {
+  // Initiating variables
+  const router = useRouter();
   const [showContent, setShowContent] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const loginButtonRef = useRef(null);
@@ -15,24 +17,22 @@ export default function Home() {
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
   const rememberMeRef = useRef(null);
-  const router = useRouter();
 
+
+  // handleLoginClick is what will happen when the login button is clicked on the login screen
   const handleLoginClick = async (e) => {
     e.preventDefault();
     setErrorMessage("");
-
+  
+    // This will login users in if they have an account and will print out an error if they don't
     try {
       const user = await login(emailRef.current.value, passwordRef.current.value);
       router.push('/dashboard');
     } catch (errorCode) {
+      console.log(errorCode);
       setShowContent((prevState) => !prevState);
-      console.log(errorCode)
-      if (errorCode === 'auth/invalid-credential') {
+      if (errorCode === 'AuthApiError: Invalid login credentials') {
         setErrorMessage("Email or password is incorrect");
-      } else if (errorCode === 'auth/missing-password') {
-        setErrorMessage("Please enter a password.");
-      } else if (errorCode == 'auth/invalid-email') {
-        setErrorMessage("Please enter a valid email.");
       } else {
         setErrorMessage("An unexpected error occurred.");
       }
@@ -40,9 +40,11 @@ export default function Home() {
     } 
   }
 
+  // handleLoginWithGoogleClick will happen when user clicks the login with google button
+  // and it will bring them to a page to login with google
   const handleLoginWithGoogleClick = (e) => {
     e.preventDefault();
-    loginWithGoogle(router)
+    loginWithGoogle();
   }
 
   return (

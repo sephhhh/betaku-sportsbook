@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useRef } from "react";
-import { register, registerUserWithGoogle } from "@/lib/firebase";
+import React, { useState, useRef, useEffect} from "react";
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
+import { register, loginWithGoogle } from "@/lib/supabase";
 
 export default function Home() {
+  // Initiating variables
   const router = useRouter();
   const [showContent, setShowContent] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -14,10 +15,13 @@ export default function Home() {
   const passwordRef = useRef(null);
   const confirmPassRef = useRef(null);
 
+  // handleRegisterClick will run when users click the register button
+  // on the register page
   const handleRegisterClick = async(e) => {
     e.preventDefault();
     setErrorMessage("");
 
+    // This "if" statement will check if passwords match or is empty
     if (
       passwordRef.current.value !== confirmPassRef.current.value ||
       passwordRef.current.value === "" ||
@@ -26,16 +30,21 @@ export default function Home() {
       setErrorMessage("Passwords do not match or are empty.");
       setShowContent(false);
     } else {
+      
+      // this is register user and if an error occurs it will
+      // print out the error
       try {
         const user = await register(emailRef.current.value, passwordRef.current.value);
-
+        sessionStorage.setItem("email", emailRef.current.value);
         console.log('Registered successfully');
         router.push('/dashboard');
+        
       } catch (errorCode) {
         setShowContent((prevState) => !prevState);
         if (errorCode === 'auth/email-already-in-use') {
           setErrorMessage("Email already exists.");
         } else {
+          alert(errorCode)
           setErrorMessage("An unexpected error occurred.");
         }
         setShowContent(false);
@@ -43,20 +52,20 @@ export default function Home() {
     }
   }
 
+  // handleSignupWithGoogleClick will run when user clicks the register with
+  // google and it will bring user to another page to register through google
   const handleSignupWithGoogleClick = async (e) => {
-    console.log
-
     e.preventDefault();
+    console.log("Google sign-in button clicked");
+  
     try {
-      await registerUserWithGoogle(router); // Await the login function
-      console.log("Login successful!");
+      await loginWithGoogle();
+      
     } catch (error) {
-      if (error.message === 'User already exists in the database.') {
-        setErrorMessage("Email already exists.");
-        setShowContent(false);
-      }
+      console.error("Error during sign-up:", error);
     }
-  }
+  };
+  
 
   return (
     

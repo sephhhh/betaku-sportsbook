@@ -1,18 +1,19 @@
 "use client";
-import Link from "next/link";
-import Image from 'next/image';
-import React, { useState, useRef, useEffect, useInsertionEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { checkCurrentUser, signOutUser } from "@/lib/firebase";
+import { signOut, projectId, supabase } from "@/lib/supabase";
 import { convertDecimalToAmerican, createGame } from "./oddsApi";
 import gameData from "../../../game.json";
 
+// createItem will create a new bet item like for an example moneyline for
+// a NFL game and return a react component
 function createItem(game, market, outcome, key, betItemRef, removeBet) {
   const homeTeam = game.homeTeam;
   const awayTeam = game.awayTeam;
   const odds = convertDecimalToAmerican(outcome.price)
   const type = market.key;
   const commence_time = formatToEST(game.commenceTime);
+
 
   const handleRemoveBet = (e) => {
     e.preventDefault();
@@ -44,12 +45,16 @@ function createItem(game, market, outcome, key, betItemRef, removeBet) {
   return type;
 }
 
+// createGameFromJson is basically fetching the NFL games from the temporary games.json
+// and returning a react component
 function createGameFromJson(setBetItems, betItems, increment, decrement, betObjects, setBetObjects, updateTotalOdds, placeBetButtonRef, userInputRef, buttonContentRef, otherButtonContentRef) {
   const [games, setGames] = useState([]);
   const betButton = useRef(null);
   const betItemRef = useRef(null);
 
 
+  // removeBet will run when user clicks the delete button next to the bet item
+  // and this will delete the betting item off the bet slip
   const removeBet = (key) => {
     setBetItems((prevBetItems) => prevBetItems.filter((bet) => bet.key !== key));
     setBetObjects((prevBetObjects) => {
@@ -65,6 +70,8 @@ function createGameFromJson(setBetItems, betItems, increment, decrement, betObje
     decrement();
   };
 
+  // addBet will run when user clicks on the "bet" they want to place such a moneyline on game
+  // and this will add that bet item to the bet slip
   const addBet = (game, market, outcome) => (e) => {
     e.preventDefault();
     const itemKey = `${game.id}-${market.key}`;
@@ -89,6 +96,7 @@ function createGameFromJson(setBetItems, betItems, increment, decrement, betObje
     }
   }
 
+  // This will create the games for the upcoming week, returning a react component
   useEffect(() => {
     const formattedGames = gameData.slice(0, 14).map((game, index) => {
       const homeTeam = game.home_team;
@@ -164,7 +172,7 @@ function createGameFromJson(setBetItems, betItems, increment, decrement, betObje
                       <div key={i}>
                         <button ref={betButton} className="w-[235px] border border-solid border-[blue]" onClick={addBet(game, market, outcome)}>
                           <div key={i}>
-                            {MyComponent(market, outcome)}
+                            {betItem(market, outcome)}
                           </div>
                         </button>
                       </div>
@@ -191,6 +199,7 @@ function createGameFromJson(setBetItems, betItems, increment, decrement, betObje
   );
 }
 
+// This is to formate the time to EST
 function formatToEST(datetimeString) {
   // Create a new Date object from the input string
   const date = new Date(datetimeString);
@@ -209,7 +218,8 @@ function formatToEST(datetimeString) {
   return `${formattedTime} EST`;
 }
 
-function MyComponent(market, outcome) {
+// This will create the react component for the betting item
+function betItem(market, outcome) {
   if (market.key === "h2h") {
     return <div>{convertDecimalToAmerican(outcome.price)}</div>;
   } else if (market.key === "spreads") {
@@ -229,8 +239,10 @@ function MyComponent(market, outcome) {
 }
 
 export default function Home() {
+  // Initiating variables
   const router = useRouter();
   const signoutButtonRef = useRef(null);
+  const accountButtonRef = useRef(null);
   const placeBetButtonRef = useRef(null);
   const buttonContentRef = useRef(null);
   const otherButtonContentRef = useRef(null);
@@ -246,20 +258,50 @@ export default function Home() {
   const [betItems, setBetItems] = useState([]);
   const [betObjects, setBetObjects] = useState([]);
 
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: user, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("Error getting user:", error);
+      } else {
+        if (user.user.app_metadata.provider === 'google') {
+          alert('from google');
+        }
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+
+  // This will increment the count on the bet slip for the number of
+  // betting items
   const increment = () => {
     setCount((prevCount) => prevCount + 1);
   };
 
+  // This will decrement the count on the bet slip for the number of
+  // betting items
   const decrement = () => {
     setCount((prevCount) => prevCount - 1);
   };
 
+  // handleAccountClick will run when the user clicks the account button which
+  // will route them to their account page
+  const handleAccountClick = (e) => {
+    e.preventDefault();
+    router.push('/account');
+  }
+
+  // Signs out user
   const handleSignoutClick = (e) => {
     e.preventDefault();
-    signOutUser();
+    signOut();
     router.push('/');
   }
 
+  // This will update the total odds for the bet slip as the user adds or deletes an item
   const updateTotalOdds = (updatedBetObj) => {
     console.log(updatedBetObj)
     if (updatedBetObj.length === 0) {
@@ -281,11 +323,14 @@ export default function Home() {
 
   }
 
+
   const handlePlaceBet = (e) => {
     e.preventDefault();
     alert('hi');
   }
 
+  // handleUserInput will run when user puts an amount of money they want to wager on the
+  // bet slip and will output the profit
   const handleUserInput = (e) => {
     if (e.target.value === '') {
       placeBetButtonRef.current.className = "h-[100%] w-[100%] bg-[#bf1216]";
@@ -311,26 +356,55 @@ export default function Home() {
     }
   }
 
+  // create refs and a variable in order to dynamically change the height of the
+  // games dashboard
+  const containerRef = useRef(null);
+  const headerRef = useRef(null);
+  const hr1Ref = useRef(null);
+  const subheaderRef = useRef(null);
+  const hr2Ref = useRef(null);
+  const [scrollableHeight, setScrollableHeight] = useState(0);
+
+  // dynamically change the height of the games dashboard based on the other components
+  // in that container
+  useEffect(() => {
+    if (
+      containerRef.current &&
+      headerRef.current &&
+      hr1Ref.current &&
+      subheaderRef.current &&
+      hr2Ref.current
+    ) {
+      // Get the heights of all the elements
+      const containerHeight = containerRef.current.getBoundingClientRect().height;
+      const headerHeight = headerRef.current.getBoundingClientRect().height;
+      const hr1Height = hr1Ref.current.getBoundingClientRect().height;
+      const subheaderHeight = subheaderRef.current.getBoundingClientRect().height;
+      const hr2Height = hr2Ref.current.getBoundingClientRect().height;
+
+      // Calculate the remaining height
+      const remainingHeight = containerHeight - (headerHeight + hr1Height + subheaderHeight + hr2Height);
+      setScrollableHeight(remainingHeight);
+    }
+  }, []);
+
   return (
-    <main className="flex w-screen pl-[40px] gap-[35px] bg-[#f1f3f7]">
-      <div className="flex flex-grow flex-col mt-[10px] gap-[20px]">
+    <main className="flex h-screen w-screen pl-[40px] gap-[35px] bg-[#f1f3f7]">
+      <div className="flex flex-grow flex-col h-[100%] mt-[10px] gap-[20px]">
         <div className="flex justify-between items-center pl-[20px] pr-[20px] shadow-[rgba(50,50,93,0.25)_0px_2px_5px_-1px,rgba(0,0,0,0.3)_0px_1px_3px_-1px] bg-[#fff]">
           <div className="flex h-[45px] items-center gap-[30px]">
             <button className="sportTitle">NFL</button><button className="sportTitle">NBA</button><button className="sportTitle">MLB</button><button className="sportTitle">NHL</button>
           </div>
 
-          <button
-          ref={signoutButtonRef}
-          className="h-[25px] bg-white"
-          aria-label="Sign out"
-          onClick={handleSignoutClick}
-        > Sign out
-        </button>
+          <div className="flex gap-[30px]">
+            <button ref={accountButtonRef} className="h-[25px] bg-white" onClick={handleAccountClick}>Account</button>
+            <button ref={signoutButtonRef} className="h-[25px] bg-white" aria-label="Sign out" onClick={handleSignoutClick}> Sign out</button>
+          </div>
         </div>
-        <div className="rounded-[5px] shadow-[rgba(99,99,99,0.2)_0px_2px_8px_0px] bg-[#fff]">
-          <div className="pl-[20px] pr-[20px] pt-[10px] pb-[10px] text-[20px] font-semibold">NFL Odds</div>
-          <hr></hr>
-          <div className="flex justify-between pl-[20px] pr-[20px] pt-[10px] pb-[10px] bg-[#f1f3f7]">
+        <div ref={containerRef} className="flex flex-grow flex-col rounded-[5px] shadow-[rgba(99,99,99,0.2)_0px_2px_8px_0px] bg-[#fff]">
+          <div ref={headerRef} className="pl-[20px] pr-[20px] pt-[10px] pb-[10px] text-[20px] font-semibold">NFL Odds</div>
+          <hr ref={hr1Ref}></hr>
+          <div ref={subheaderRef} className="flex justify-between pl-[20px] pr-[20px] pt-[10px] pb-[10px] bg-[#f1f3f7]">
             <div className="w-[75px]">NFL</div>
             <div className="flex justify-around w-[725px]">
               <div className="text-[#788490]">MONEY</div>
@@ -338,14 +412,14 @@ export default function Home() {
               <div className="text-[#788490]">TOTAL</div>
             </div>
           </div>
-          <hr></hr>
-          <div className="overflow-auto min-h-[500px] max-h-[740px] pl-[20px] pr-[20px] pt-[10px] pb-[10px] hide-scrollbar">
+          <hr ref={hr2Ref}></hr>
+          <div style={{ height: `${scrollableHeight}px` }} className="overflow-auto pl-[20px] pr-[20px] pt-[10px] pb-[10px] hide-scrollbar">
             {createGameFromJson(setBetItems, betItems, increment, decrement, betObjects, setBetObjects, updateTotalOdds, placeBetButtonRef, userInputRef, buttonContentRef, otherButtonContentRef)}
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col min-w-[425px] w-[475px] h-[912px] shadow-[rgba(0,0,0,0.24)_0px_3px_8px]">
+      <div className="flex flex-col min-w-[425px] w-[475px] h-[100%] shadow-[rgba(0,0,0,0.24)_0px_3px_8px]">
         <div className="flex justify-between border-b-2 border-b-solid border-b-[#c8c8c8] p-[15px] bg-[#fff] mb-[15px]">
           <div className="flex items-center">  
             <div ref={slipCountRef} className="w-[30px] h-[30px] bg-blue-500 text-white flex items-center justify-center rounded-full">{count}</div>
@@ -356,7 +430,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div ref={betSlipRef} className="overflow-auto h-[625px] border-t-2 border-b border-solid border-[#c8c8c8] pl-[20px] pr-[20px] bg-[#fff]">
+        <div ref={betSlipRef} className="overflow-auto h-[635px] border-t-2 border-b border-solid border-[#c8c8c8] pl-[20px] pr-[20px] bg-[#fff]">
           {betItems}
         </div>
         <div className="bg-[#fff] p-[15px] border-b-2 border-solid border-[#c8c8c8]">
